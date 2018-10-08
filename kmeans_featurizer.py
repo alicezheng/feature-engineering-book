@@ -85,7 +85,7 @@ class KMeansFeaturizer:
                           max_iter=1)
         km_model.fit(X)
         
-        self.km_model = km_model
+        self.km_model_ = km_model
         self.cluster_centers_ = km_model.cluster_centers_
         return self
         
@@ -103,7 +103,7 @@ class KMeansFeaturizer:
         -------
         cluster_ids : array, shape[n_data_points,1]
         """
-        clusters = self.km_model.predict(X)
+        clusters = self.km_model_.predict(X)
         return clusters[:,np.newaxis]
     
     def fit_transform(self, X, y=None):
