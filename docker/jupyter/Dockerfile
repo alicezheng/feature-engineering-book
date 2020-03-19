@@ -11,4 +11,7 @@ RUN jupyter labextension install \
 RUN jupyter lab build
 
 # Install additional packages
-# RUN pip install -q --no-cache-dir nltk==3.4.5
+RUN pip install --no-cache-dir \
+  nltk==3.4.5 \
+  spacy==2.2.4 \
+  textblob==0.15.3
