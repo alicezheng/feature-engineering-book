@@ -20,6 +20,9 @@ class KMeansFeaturizer:
         This is passed to k-means as the generator used to initialize the 
         kmeans centers. If an integer is given, it fixes the seed. Defaults to 
         the global numpy random number generator.
+    
+    **kwargs : dict
+        Additional KMeans parameters
 
     Attributes
     ----------
@@ -27,10 +30,11 @@ class KMeansFeaturizer:
         Coordinates of cluster centers. n_features does count the target column.
     """
 
-    def __init__(self, k=100, target_scale=5.0, random_state=None):
+    def __init__(self, k=100, target_scale=5.0, random_state=None, **kwargs):
         self.k = k
         self.target_scale = target_scale
         self.random_state = random_state
+        self.kwargs = kwargs
         
     def fit(self, X, y=None):
         """Runs k-means on the input data and find centroids.
@@ -54,11 +58,13 @@ class KMeansFeaturizer:
             If provided, will be weighted with `target_scale` and included in 
             k-means clustering as hint.
         """
+        
         if y is None:
             # No target variable, just do plain k-means
             km_model = KMeans(n_clusters=self.k, 
                               n_init=20, 
-                              random_state=self.random_state)
+                              random_state=self.random_state,
+                              **self.kwargs)
             km_model.fit(X)
 
             self.km_model_ = km_model
@@ -67,12 +73,13 @@ class KMeansFeaturizer:
 
         # There is target information. Apply appropriate scaling and include
         # into input data to k-means            
-        data_with_target = np.hstack((X, y[:,np.newaxis]*self.target_scale))
+        data_with_target = np.hstack((X, y[:, np.newaxis] * self.target_scale))
 
         # Build a pre-training k-means model on data and target
         km_model_pretrain = KMeans(n_clusters=self.k, 
                                    n_init=20, 
-                                   random_state=self.random_state)
+                                   random_state=self.random_state,
+                                   **self.kwargs)
         km_model_pretrain.fit(data_with_target)
 
         # Run k-means a second time to get the clusters in the original space
@@ -80,17 +87,18 @@ class KMeansFeaturizer:
         # Go through a single iteration of cluster assignment and centroid 
         # recomputation.
         km_model = KMeans(n_clusters=self.k, 
-                          init=km_model_pretrain.cluster_centers_[:,:2], 
+                          init=km_model_pretrain.cluster_centers_[:, :-1], 
                           n_init=1, 
-                          max_iter=1)
+                          max_iter=1,
+                          **self.kwargs)
         km_model.fit(X)
         
-        self.km_model = km_model
+        self.km_model_ = km_model
         self.cluster_centers_ = km_model.cluster_centers_
         return self
         
     def transform(self, X, y=None):
-        """Output the closest cluster id for each input data point.
+        """Outputs the closest cluster id for each input data point.
 
         Parameters
         ----------
@@ -101,13 +109,10 @@ class KMeansFeaturizer:
 
         Returns
         -------
-        cluster_ids : array, shape[n_data_points,1]
+        cluster_ids : array, shape[n_data_points, 1]
         """
-        clusters = self.km_model.predict(X)
-        return clusters[:,np.newaxis]
+        return self.km_model_.predict(X)[:, np.newaxis]
     
     def fit_transform(self, X, y=None):
-        """Runs fit followed by transform.
-        """
-        self.fit(X, y)
-        return self.transform(X, y)
+        """Runs fit followed by transform."""
+        return self.fit(X, y).transform(X, y)
