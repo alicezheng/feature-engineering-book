@@ -1,3 +1,7 @@
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import OneHotEncoder
+
 class KMeansFeaturizer:
     """Transforms numeric data into k-means cluster memberships.
     
@@ -31,7 +35,8 @@ class KMeansFeaturizer:
         self.k = k
         self.target_scale = target_scale
         self.random_state = random_state
-        
+        self.cluster_encoder = OneHotEncoder().fit(np.array(range(k)).reshape(-1,1))
+
     def fit(self, X, y=None):
         """Runs k-means on the input data and find centroids.
 
@@ -85,7 +90,7 @@ class KMeansFeaturizer:
                           max_iter=1)
         km_model.fit(X)
         
-        self.km_model = km_model
+        self.km_model_ = km_model
         self.cluster_centers_ = km_model.cluster_centers_
         return self
         
@@ -103,8 +108,8 @@ class KMeansFeaturizer:
         -------
         cluster_ids : array, shape[n_data_points,1]
         """
-        clusters = self.km_model.predict(X)
-        return clusters[:,np.newaxis]
+        clusters = self.km_model_.predict(X)
+        return self.cluster_encoder.transform(clusters.reshape(-1,1))
     
     def fit_transform(self, X, y=None):
         """Runs fit followed by transform.
